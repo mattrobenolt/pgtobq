@@ -1,0 +1,7 @@
+[[constraint]]
+  branch = "master"
+  name = "github.com/lib/pq"
+
+[[constraint]]
+  name = "cloud.google.com/go"
+  version = "0.14.0"
