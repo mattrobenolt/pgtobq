@@ -18,11 +18,12 @@ import (
 const CREDENTIALS = "GOOGLE_APPLICATION_CREDENTIALS"
 
 var (
-	pgConn    = flag.String("uri", "postgres://postgres@127.0.0.1:5432/postgres?sslmode=disable", "postgres connection uri")
-	pgSchema  = flag.String("schema", "public", "postgres schema")
-	pgTable   = flag.String("table", "", "postgres table name")
-	datasetId = flag.String("dataset", "", "BigQuery dataset")
-	projectId = flag.String("project", "", "BigQuery project id")
+	pgConn     = flag.String("uri", "postgres://postgres@127.0.0.1:5432/postgres?sslmode=disable", "postgres connection uri")
+	pgSchema   = flag.String("schema", "public", "postgres schema")
+	pgTable    = flag.String("table", "", "postgres table name")
+	datasetId  = flag.String("dataset", "", "BigQuery dataset")
+	projectId  = flag.String("project", "", "BigQuery project id")
+	partitions = flag.Int("partitions", -1, "Number of per-day partitions, -1 to disable")
 )
 
 type Column struct {
@@ -122,12 +123,25 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
+
+	partitioned := *partitions > -1
+
 	schema := schemaFromPostgres(db, *pgSchema, *pgTable)
 	table := client.Dataset(*datasetId).Table(*pgTable)
 	if _, err := table.Metadata(ctx); err != nil {
-		if err := table.Create(ctx, &bigquery.TableMetadata{Schema: schema}); err != nil {
+		metadata := &bigquery.TableMetadata{Schema: schema}
+		if partitioned {
+			metadata.TimePartitioning = &bigquery.TimePartitioning{
+				Expiration: time.Duration(*partitions) * 24 * time.Hour,
+			}
+		}
+		if err := table.Create(ctx, metadata); err != nil {
 			log.Fatal(err)
 		}
+	}
+
+	if partitioned {
+		table.TableID += time.Now().UTC().Format("$20060102")
 	}
 
 	f := getRowsStream(db, *pgSchema, *pgTable)
