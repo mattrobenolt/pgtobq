@@ -40,17 +40,17 @@ func (c *Column) ToFieldSchema() *bigquery.FieldSchema {
 	switch c.Type {
 	case "character varying", "text":
 		f.Type = bigquery.StringFieldType
-	case "integer", "bigint":
+	case "integer", "bigint", "smallint":
 		f.Type = bigquery.IntegerFieldType
-	//case "":
-	//	f.Type = bigquery.FloatFieldType
+	case "double precision":
+		f.Type = bigquery.FloatFieldType
 	case "boolean":
 		f.Type = bigquery.BooleanFieldType
 	case "timestamp with time zone":
 		f.Type = bigquery.TimestampFieldType
 	case "date":
 		f.Type = bigquery.DateFieldType
-	case "timestamp", "timestamp without time zone":
+	case "timestamp", "timestamp without time zone", "time without time zone":
 		f.Type = bigquery.TimeFieldType
 	default:
 		// TODO: return as error
