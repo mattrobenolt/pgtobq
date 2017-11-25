@@ -42,7 +42,7 @@ func (c *Column) ToFieldSchema() *bigquery.FieldSchema {
 		f.Type = bigquery.StringFieldType
 	case "integer", "bigint", "smallint":
 		f.Type = bigquery.IntegerFieldType
-  case "double precision":
+	case "double precision":
 		f.Type = bigquery.FloatFieldType
 	case "boolean":
 		f.Type = bigquery.BooleanFieldType
