@@ -50,7 +50,7 @@ func (c *Column) ToFieldSchema() *bigquery.FieldSchema {
 		f.Type = bigquery.TimestampFieldType
 	case "date":
 		f.Type = bigquery.DateFieldType
-	case "timestamp", "timestamp without time zone":
+	case "timestamp", "timestamp without time zone", "time without time zone":
 		f.Type = bigquery.TimeFieldType
 	default:
 		// TODO: return as error
