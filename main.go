@@ -41,19 +41,21 @@ func (c *Column) ToFieldSchema() *bigquery.FieldSchema {
 	f.Required = c.IsNullable == "NO"
 
 	switch c.Type {
-	case "character varying", "text":
+	case "varchar", "bpchar", "text", "citext", "xml", "cidr", "inet", "uuid", "bit", "varbit", "bytea", "money":
 		f.Type = bigquery.StringFieldType
-	case "integer", "bigint", "smallint":
+	case "int2", "int4", "int8":
 		f.Type = bigquery.IntegerFieldType
-	case "double precision":
+	case "float4", "float8", "numeric":
 		f.Type = bigquery.FloatFieldType
-	case "boolean":
+	case "bool":
 		f.Type = bigquery.BooleanFieldType
-	case "timestamp with time zone":
+	case "timestamptz":
 		f.Type = bigquery.TimestampFieldType
 	case "date":
 		f.Type = bigquery.DateFieldType
-	case "timestamp", "timestamp without time zone", "time without time zone":
+	case "timestamp":
+		f.Type = bigquery.DateTimeFieldType
+	case "time":
 		f.Type = bigquery.TimeFieldType
 	default:
 		// TODO: return as error
@@ -64,7 +66,7 @@ func (c *Column) ToFieldSchema() *bigquery.FieldSchema {
 }
 
 func schemaFromPostgres(db *sql.DB, schema, table string) bigquery.Schema {
-	rows, err := db.Query(`SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema=$1 AND table_name=$2 ORDER BY ordinal_position`, schema, table)
+	rows, err := db.Query(`SELECT column_name, udt_name, is_nullable FROM information_schema.columns WHERE table_schema=$1 AND table_name=$2 ORDER BY ordinal_position`, schema, table)
 	if err != nil {
 		log.Fatal(err)
 	}
