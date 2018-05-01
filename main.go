@@ -39,12 +39,6 @@ func (c *Column) ToFieldSchema() *bigquery.FieldSchema {
 	f.Name = c.Name
 	f.Required = c.IsNullable == "NO"
 
-	switch c.Name {
-	// Allow BQ to convert special Epoch columns to timestamp
-	case "md_insert", "md_update":
-		c.Type = "timestamptz"
-	}
-
 	switch c.Type {
 	case "varchar", "bpchar", "text", "citext", "xml", "cidr", "inet", "uuid", "bit", "varbit", "bytea", "money", "jsonb":
 		f.Type = bigquery.StringFieldType
