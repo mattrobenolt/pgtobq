@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"runtime"
 	"time"
 
 	"cloud.google.com/go/bigquery"
@@ -15,15 +16,17 @@ import (
 	"google.golang.org/api/option"
 )
 
+const Version = "0.0.0"
 const CREDENTIALS = "GOOGLE_APPLICATION_CREDENTIALS"
 
 var (
-	pgConn     = flag.String("uri", "postgres://postgres@127.0.0.1:5432/postgres?sslmode=disable", "postgres connection uri")
-	pgSchema   = flag.String("schema", "public", "postgres schema")
-	pgTable    = flag.String("table", "", "postgres table name")
-	datasetId  = flag.String("dataset", "", "BigQuery dataset")
-	projectId  = flag.String("project", "", "BigQuery project id")
-	partitions = flag.Int("partitions", -1, "Number of per-day partitions, -1 to disable")
+	pgConn      = flag.String("uri", "postgres://postgres@127.0.0.1:5432/postgres?sslmode=disable", "postgres connection uri")
+	pgSchema    = flag.String("schema", "public", "postgres schema")
+	pgTable     = flag.String("table", "", "postgres table name")
+	datasetId   = flag.String("dataset", "", "BigQuery dataset")
+	projectId   = flag.String("project", "", "BigQuery project id")
+	partitions  = flag.Int("partitions", -1, "Number of per-day partitions, -1 to disable")
+	versionFlag = flag.Bool("version", false, "Print program version")
 )
 
 type Column struct {
@@ -107,6 +110,10 @@ func init() {
 }
 
 func main() {
+	if *versionFlag {
+		fmt.Fprintf(os.Stderr, "%s version: %s (%s on %s/%s; %s)\n", os.Args[0], Version, runtime.Version(), runtime.GOOS, runtime.GOARCH, runtime.Compiler)
+		os.Exit(0)
+	}
 	keyfile := os.Getenv(CREDENTIALS)
 	if keyfile == "" {
 		log.Fatal("!! missing ", CREDENTIALS)
