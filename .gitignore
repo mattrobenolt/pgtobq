@@ -1,3 +1,4 @@
 vendor/
 credentials.json
 pgtobq
+bin/

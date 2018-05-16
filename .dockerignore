@@ -1,0 +1,7 @@
+Dockerfile
+.git/
+vendor/
+bin/
+README.md
+credentials.json
+build.sh
