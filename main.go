@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"runtime"
 	"time"
 
 	"cloud.google.com/go/bigquery"
@@ -16,6 +17,7 @@ import (
 	"google.golang.org/api/option"
 )
 
+const Version = "1.0.0"
 const CREDENTIALS = "GOOGLE_APPLICATION_CREDENTIALS"
 
 var (
@@ -26,6 +28,7 @@ var (
 	projectId  = flag.String("project", "", "BigQuery project id")
 	delimiter  = flag.String("delimiter", "|", "CSV delimiter, default |")
 	partitions = flag.Int("partitions", -1, "Number of per-day partitions, -1 to disable")
+	versionFlag = flag.Bool("version", false, "Print program version")
 )
 
 type Column struct {
@@ -63,6 +66,7 @@ func (c *Column) ToFieldSchema() *bigquery.FieldSchema {
 
 	return &f
 }
+
 
 func schemaFromPostgres(db *sql.DB, schema, table string) (bigquery.Schema, []string) {
 	rows, err := db.Query(`SELECT column_name, udt_name, is_nullable FROM information_schema.columns WHERE table_schema=$1 AND table_name=$2 ORDER BY ordinal_position`, schema, table)
@@ -114,6 +118,10 @@ func init() {
 }
 
 func main() {
+	if *versionFlag {
+		fmt.Fprintf(os.Stderr, "%s version: %s (%s on %s/%s; %s)\n", os.Args[0], Version, runtime.Version(), runtime.GOOS, runtime.GOARCH, runtime.Compiler)
+		os.Exit(0)
+	}
 	keyfile := os.Getenv(CREDENTIALS)
 	if keyfile == "" {
 		log.Fatal("!! missing ", CREDENTIALS)
