@@ -9,10 +9,11 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/bigquery"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"google.golang.org/api/option"
 )
 
@@ -27,6 +28,7 @@ var (
 	projectId   = flag.String("project", "", "BigQuery project id")
 	partitions  = flag.Int("partitions", -1, "Number of per-day partitions, -1 to disable")
 	versionFlag = flag.Bool("version", false, "Print program version")
+	exclude     = flag.String("exclude", "", "columns to exclude")
 )
 
 type Column struct {
@@ -71,13 +73,16 @@ func schemaFromPostgres(db *sql.DB, schema, table string) bigquery.Schema {
 		log.Fatal(err)
 	}
 	defer rows.Close()
+	excludes := strings.Split(*exclude, ",")
 	var c Column
 	var s bigquery.Schema
 	for rows.Next() {
 		if err := rows.Scan(&c.Name, &c.Type, &c.IsNullable); err != nil {
 			log.Fatal(err)
 		}
-		s = append(s, c.ToFieldSchema())
+		if !contains(c.Name, excludes) {
+			s = append(s, c.ToFieldSchema())
+		}
 	}
 	if err := rows.Err(); err != nil {
 		log.Fatal(err)
@@ -85,8 +90,25 @@ func schemaFromPostgres(db *sql.DB, schema, table string) bigquery.Schema {
 	return s
 }
 
-func getRowsStream(db *sql.DB, schema, table string) io.Reader {
-	rows, err := db.Query(fmt.Sprintf(`SELECT row_to_json(t) FROM (SELECT * FROM "%s"."%s") AS t`, schema, table))
+func contains(s string, haystack []string) bool {
+	for i := 0; i < len(haystack); i++ {
+		if s == haystack[i] {
+			return true
+		}
+	}
+	return false
+}
+
+func columnsFromSchema(schema bigquery.Schema) string {
+	cols := make([]string, len(schema))
+	for i, field := range schema {
+		cols[i] = pq.QuoteIdentifier(field.Name)
+	}
+	return strings.Join(cols, ",")
+}
+
+func getRowsStream(db *sql.DB, schema bigquery.Schema, pgSchema, table string) io.Reader {
+	rows, err := db.Query(fmt.Sprintf(`SELECT row_to_json(t) FROM (SELECT %s FROM %s.%s) AS t`, columnsFromSchema(schema), pq.QuoteIdentifier(pgSchema), pq.QuoteIdentifier(table)))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -153,7 +175,7 @@ func main() {
 		table.TableID += time.Now().UTC().Format("$20060102")
 	}
 
-	f := getRowsStream(db, *pgSchema, *pgTable)
+	f := getRowsStream(db, schema, *pgSchema, *pgTable)
 	rs := bigquery.NewReaderSource(f)
 	rs.SourceFormat = bigquery.JSON
 	rs.MaxBadRecords = 0
