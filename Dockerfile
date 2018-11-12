@@ -1,21 +1,11 @@
-FROM golang:1.10
+FROM golang:1.11
 
-ENV DEP_DOWNLOAD_URL https://github.com/golang/dep/releases/download/v0.4.1/dep-linux-amd64
-ENV DEP_DOWNLOAD_SHA 31144e465e52ffbc0035248a10ddea61a09bf28b00784fd3fdd9882c8cbb2315
+RUN mkdir -p /usr/src/pgtobq
+WORKDIR /usr/src/pgtobq
 
-RUN set -ex; \
-    wget -O dep "$DEP_DOWNLOAD_URL"; \
-    echo "$DEP_DOWNLOAD_SHA  dep" | sha256sum -c -; \
-    chmod +x dep ; \
-    mv dep /usr/local/bin/; \
-    dep version
+COPY go.mod go.sum ./
 
-RUN mkdir -p /go/src/app
-WORKDIR /go/src/app
-
-COPY Gopkg.toml Gopkg.lock ./
-
-RUN dep ensure -vendor-only
+RUN go mod download
 
 COPY . ./
 
