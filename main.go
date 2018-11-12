@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -29,6 +30,7 @@ var (
 	partitions  = flag.Int("partitions", -1, "Number of per-day partitions, -1 to disable")
 	versionFlag = flag.Bool("version", false, "Print program version")
 	exclude     = flag.String("exclude", "", "columns to exclude")
+	ignoreTypes = flag.Bool("ignore-unknown-types", false, "Ignore unknown column types")
 )
 
 type Column struct {
@@ -37,7 +39,7 @@ type Column struct {
 	IsNullable string
 }
 
-func (c *Column) ToFieldSchema() *bigquery.FieldSchema {
+func (c *Column) ToFieldSchema() (*bigquery.FieldSchema, error) {
 	var f bigquery.FieldSchema
 	f.Name = c.Name
 	f.Required = c.IsNullable == "NO"
@@ -60,11 +62,10 @@ func (c *Column) ToFieldSchema() *bigquery.FieldSchema {
 	case "time":
 		f.Type = bigquery.TimeFieldType
 	default:
-		// TODO: return as error
-		panic(c.Type)
+		return nil, errors.New("Unknown column type: " + c.Type)
 	}
 
-	return &f
+	return &f, nil
 }
 
 func schemaFromPostgres(db *sql.DB, schema, table string) bigquery.Schema {
@@ -81,7 +82,12 @@ func schemaFromPostgres(db *sql.DB, schema, table string) bigquery.Schema {
 			log.Fatal(err)
 		}
 		if !contains(c.Name, excludes) {
-			s = append(s, c.ToFieldSchema())
+			f, err := c.ToFieldSchema()
+			if err == nil {
+				s = append(s, f)
+			} else if !*ignoreTypes {
+				panic(err)
+			}
 		}
 	}
 	if err := rows.Err(); err != nil {
