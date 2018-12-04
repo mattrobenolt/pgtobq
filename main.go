@@ -137,6 +137,7 @@ func getRowsStream(db *sql.DB, schema bigquery.Schema, pgSchema, table string) i
 
 func init() {
 	flag.Parse()
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
 func main() {
