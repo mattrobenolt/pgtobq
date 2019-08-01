@@ -22,16 +22,17 @@ const Version = "1.2.1"
 const CREDENTIALS = "GOOGLE_APPLICATION_CREDENTIALS"
 
 var (
-	pgConn          = flag.String("uri", "postgres://postgres@127.0.0.1:5432/postgres?sslmode=disable", "postgres connection uri")
-	pgSchema        = flag.String("schema", "public", "postgres schema")
-	pgTable         = flag.String("table", "", "postgres table name")
-	datasetId       = flag.String("dataset", "", "BigQuery dataset")
-	projectId       = flag.String("project", "", "BigQuery project id")
-	partitions      = flag.Int("partitions", -1, "Number of per-day partitions, -1 to disable")
-	versionFlag     = flag.Bool("version", false, "Print program version")
-	replayLabelFlag = flag.Bool("with-replay-label", false, "Set replay label on BigQuery table metadata")
-	exclude         = flag.String("exclude", "", "columns to exclude")
-	ignoreTypes     = flag.Bool("ignore-unknown-types", false, "Ignore unknown column types")
+	pgConn      = flag.String("uri", "postgres://postgres@127.0.0.1:5432/postgres?sslmode=disable", "postgres connection uri")
+	pgSchema    = flag.String("schema", "public", "postgres schema")
+	pgTable     = flag.String("table", "", "postgres table name")
+	datasetId   = flag.String("dataset", "", "BigQuery dataset")
+	projectId   = flag.String("project", "", "BigQuery project id")
+	partitions  = flag.Int("partitions", -1, "Number of per-day partitions, -1 to disable")
+	versionFlag = flag.Bool("version", false, "Print program version")
+	labelKey    = flag.String("label-key", "", "Combined with --label-value, name for label on BigQuery table metadata")
+	labelValue  = flag.String("label-value", "", "Combined with --label-key, value for label on BigQuery table metadata")
+	exclude     = flag.String("exclude", "", "columns to exclude")
+	ignoreTypes = flag.Bool("ignore-unknown-types", false, "Ignore unknown column types")
 )
 
 type Column struct {
@@ -146,6 +147,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%s version: %s (%s on %s/%s; %s)\n", os.Args[0], Version, runtime.Version(), runtime.GOOS, runtime.GOARCH, runtime.Compiler)
 		os.Exit(0)
 	}
+
+	if (*labelKey != "" && *labelValue == "") || (*labelKey == "" && *labelValue != "") {
+		log.Fatal("!! a label key and a label value are both required if either is passed")
+	}
+
 	keyfile := os.Getenv(CREDENTIALS)
 	if keyfile == "" {
 		log.Fatal("!! missing ", CREDENTIALS)
@@ -168,14 +174,6 @@ func main() {
 	schema := schemaFromPostgres(db, *pgSchema, *pgTable)
 	table := client.Dataset(*datasetId).Table(*pgTable)
 
-	var walTimestamp sql.NullString
-	if *replayLabelFlag {
-		err := db.QueryRow("SELECT CAST(EXTRACT(epoch FROM pg_last_xact_replay_timestamp()) * 1000000 AS BIGINT)").Scan(&walTimestamp)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
 	if _, err := table.Metadata(ctx); err != nil {
 		metadata := &bigquery.TableMetadata{Schema: schema}
 		if partitioned {
@@ -183,17 +181,17 @@ func main() {
 				Expiration: time.Duration(*partitions) * 24 * time.Hour,
 			}
 		}
-		if walTimestamp.Valid {
+		if *labelKey != "" && *labelValue != "" {
 			labels := make(map[string]string)
-			labels["last_xact_replay_timestamp"] = walTimestamp.String
+			labels[*labelKey] = *labelValue
 			metadata.Labels = labels
 		}
 		if err := table.Create(ctx, metadata); err != nil {
 			log.Fatal(err)
 		}
-	} else if walTimestamp.Valid {
+	} else if *labelKey != "" && *labelValue != "" {
 		var tm bigquery.TableMetadataToUpdate
-		tm.SetLabel("last_xact_replay_timestamp", walTimestamp.String)
+		tm.SetLabel(*labelKey, *labelValue)
 		_, err := table.Update(ctx, tm, "")
 		if err != nil {
 			log.Fatal(err)
