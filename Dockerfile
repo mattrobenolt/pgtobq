@@ -10,12 +10,12 @@ RUN go mod download
 COPY . ./
 
 ENV PLATFORMS \
-        linux/amd64 linux/386 \
-        darwin/amd64 darwin/386 \
-        freebsd/amd64 freebsd/386
+        linux \
+        darwin \
+        freebsd
 
 CMD set -ex ; \
     for platform in $PLATFORMS; do \
-        GOOS=${platform%/*} GOARCH=${platform##*/} go build -v -o bin/pgtobq-${platform%/*}-${platform##*/}; \
+        GOOS=${platform} GOARCH=amd64 go build -v -o bin/pgtobq-${platform}-amd64; \
     done ; \
     ls -l bin/
