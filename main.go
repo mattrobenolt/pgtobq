@@ -18,7 +18,7 @@ import (
 	"google.golang.org/api/option"
 )
 
-const Version = "1.3.0"
+const Version = "1.4.0"
 const CREDENTIALS = "GOOGLE_APPLICATION_CREDENTIALS"
 
 var (
@@ -202,6 +202,8 @@ func main() {
 		table.TableID += time.Now().UTC().Format("$20060102")
 	}
 
+	log.Println("TableID", table.TableID)
+
 	f := getRowsStream(db, schema, *pgSchema, *pgTable)
 	rs := bigquery.NewReaderSource(f)
 	rs.SourceFormat = bigquery.JSON
@@ -214,6 +216,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("JobID", job.ID())
 	for {
 		status, err := job.Status(ctx)
 		if err != nil {
