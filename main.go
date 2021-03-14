@@ -47,7 +47,7 @@ func (c *Column) ToFieldSchema() (*bigquery.FieldSchema, error) {
 	f.Required = c.IsNullable == "NO"
 
 	switch c.Type {
-	case "varchar", "bpchar", "text", "citext", "xml", "cidr", "inet", "uuid", "bit", "varbit", "bytea", "money":
+	case "varchar", "bpchar", "text", "citext", "xml", "cidr", "inet", "uuid", "bit", "varbit", "bytea", "money", "jsonb":
 		f.Type = bigquery.StringFieldType
 	case "int2", "int4", "int8":
 		f.Type = bigquery.IntegerFieldType
@@ -111,6 +111,9 @@ func columnsFromSchema(schema bigquery.Schema) string {
 	cols := make([]string, len(schema))
 	for i, field := range schema {
 		cols[i] = pq.QuoteIdentifier(field.Name)
+        if field.Type == bigquery.StringFieldType {
+            cols[i] = cols[i] + "::text"
+        }
 	}
 	return strings.Join(cols, ",")
 }
