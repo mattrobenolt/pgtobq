@@ -33,6 +33,7 @@ var (
 	labelValue  = flag.String("label-value", "", "Combined with --label-key, value for label on BigQuery table metadata")
 	exclude     = flag.String("exclude", "", "columns to exclude")
 	ignoreTypes = flag.Bool("ignore-unknown-types", false, "Ignore unknown column types")
+	updateOpts  = flag.String("schema-update-opts", "", "loader schema update options, comma separated")
 )
 
 type Column struct {
@@ -215,6 +216,9 @@ func main() {
 	loader := table.LoaderFrom(rs)
 	loader.CreateDisposition = bigquery.CreateNever
 	loader.WriteDisposition = bigquery.WriteTruncate
+	if *updateOpts != "" {
+		loader.SchemaUpdateOptions = strings.Split(*updateOpts, ",")
+	}
 	job, err := loader.Run(ctx)
 	if err != nil {
 		log.Fatal(err)
