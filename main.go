@@ -111,9 +111,9 @@ func columnsFromSchema(schema bigquery.Schema) string {
 	cols := make([]string, len(schema))
 	for i, field := range schema {
 		cols[i] = pq.QuoteIdentifier(field.Name)
-        if field.Type == bigquery.StringFieldType {
-            cols[i] = cols[i] + "::text"
-        }
+		if field.Type == bigquery.StringFieldType {
+			cols[i] = cols[i] + "::text"
+		}
 	}
 	return strings.Join(cols, ",")
 }

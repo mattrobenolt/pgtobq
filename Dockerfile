@@ -1,4 +1,4 @@
-FROM golang:1.15
+FROM golang:1.18
 
 RUN mkdir -p /usr/src/pgtobq
 WORKDIR /usr/src/pgtobq
