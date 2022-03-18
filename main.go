@@ -215,6 +215,7 @@ func main() {
 	loader := table.LoaderFrom(rs)
 	loader.CreateDisposition = bigquery.CreateNever
 	loader.WriteDisposition = bigquery.WriteTruncate
+	loader.SchemaUpdateOptions = []string{"ALLOW_FIELD_ADDITION", "ALLOW_FIELD_RELAXATION"}
 	job, err := loader.Run(ctx)
 	if err != nil {
 		log.Fatal(err)
